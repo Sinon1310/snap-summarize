@@ -7,8 +7,6 @@
 ![CDK](https://img.shields.io/badge/IaC-AWS_CDK-yellow)
 ![Status](https://img.shields.io/badge/Status-Live-brightgreen)
 
-## �� Live Demo
-**[https://d38fodes1k5hjx.cloudfront.net](https://d38fodes1k5hjx.cloudfront.net)**
 
 ---
 
