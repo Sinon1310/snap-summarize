@@ -26,7 +26,7 @@ const Layout = ({ children }) => {
             </Link>
             <nav className="flex items-center gap-4">
               <a 
-                href="https://github.com" 
+                href="https://github.com/Sinon1310/snap-summarize" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-slate-400 hover:text-white transition-colors"

@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://9lq8lta0nh.execute-api.ap-south-1.amazonaws.com/prod';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://9lq8lta0nh.execute-api.ap-south-1.amazonaws.com/prod';
 
 export const submitJob = async ({ type, input, email }) => {
   const response = await fetch(`${API_BASE_URL}/submit`, {

@@ -125,11 +125,32 @@ cdk deploy
 ```
 
 ### 4. Build and deploy frontend
+
+After `cdk deploy` completes, note the outputs printed in your terminal:
+
+```bash
+# Get your outputs at any time with:
+aws cloudformation describe-stacks --stack-name SnapSummarizeStack \
+  --query 'Stacks[0].Outputs' --output table
+```
+
+Then build and upload the frontend:
+
 ```bash
 cd frontend
 npm install
+
+# Set your API URL from the CDK output (ApiURL)
+cp .env.example .env
+# Edit .env and set VITE_API_BASE_URL to the ApiURL value from CDK output
+
 npm run build
-aws s3 sync ./dist s3://YOUR-WEBSITE-BUCKET --delete
+
+# Deploy to S3 — use WebsiteBucketName from CDK output
+aws s3 sync ./dist s3://$(aws cloudformation describe-stacks \
+  --stack-name SnapSummarizeStack \
+  --query "Stacks[0].Outputs[?OutputKey=='WebsiteBucketName'].OutputValue" \
+  --output text) --delete
 ```
 
 ---
