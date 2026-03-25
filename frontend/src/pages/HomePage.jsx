@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { submitJob, uploadFileToS3 } from '../api'
 
@@ -6,7 +6,7 @@ const features = [
   {
     icon: '⚡',
     title: 'Lightning Fast',
-    desc: 'Results in ~30 seconds via async queue processing',
+    desc: 'AI-powered results in under 30 seconds',
     color: '#0ea5e9',
   },
   {
@@ -18,7 +18,7 @@ const features = [
   {
     icon: '☁️',
     title: 'Serverless',
-    desc: 'AWS Lambda + SQS, scales to infinity',
+    desc: 'AWS Lambda + SQS — scales effortlessly',
     color: '#10b981',
   },
   {
@@ -27,6 +27,12 @@ const features = [
     desc: 'Get notified when your summary is ready',
     color: '#f59e0b',
   },
+]
+
+const sampleUrls = [
+  { label: 'AI on Wikipedia', url: 'https://en.wikipedia.org/wiki/Artificial_intelligence' },
+  { label: 'TechCrunch', url: 'https://techcrunch.com/2024/01/10/tech-trends/' },
+  { label: 'NASA Science', url: 'https://science.nasa.gov/earth-science/' },
 ]
 
 const HomePage = () => {
@@ -38,20 +44,34 @@ const HomePage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [dragOver, setDragOver] = useState(false)
+  const formRef = useRef(null)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+
+    // Validate
+    if (inputType === 'url' && !url.trim()) {
+      setError('Please enter a URL to summarize')
+      return
+    }
+    if (inputType === 'file' && !file) {
+      setError('Please select a file to upload')
+      return
+    }
+    if (!email.trim()) {
+      setError('Please enter your email address')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
       if (inputType === 'url') {
-        if (!url.trim()) throw new Error('Please enter a URL')
-        const result = await submitJob({ type: 'url', input: url, email })
+        const result = await submitJob({ type: 'url', input: url.trim(), email: email.trim() })
         navigate(`/results?jobId=${result.jobId}`)
       } else {
-        if (!file) throw new Error('Please select a file')
-        const result = await submitJob({ type: 'file', input: '', email })
+        const result = await submitJob({ type: 'file', input: file.name, email: email.trim() })
         if (result.uploadUrl) await uploadFileToS3(result.uploadUrl, file)
         navigate(`/results?jobId=${result.jobId}`)
       }
@@ -65,7 +85,7 @@ const HomePage = () => {
   const handleFileChange = (e) => {
     const f = e.target.files?.[0]
     if (!f) return
-    if (f.size > 10 * 1024 * 1024) { setError('File must be under 10MB'); return }
+    if (f.size > 10 * 1024 * 1024) { setError('File must be under 10 MB'); return }
     setFile(f)
     setError('')
   }
@@ -75,8 +95,14 @@ const HomePage = () => {
     setDragOver(false)
     const f = e.dataTransfer.files?.[0]
     if (!f) return
-    if (f.size > 10 * 1024 * 1024) { setError('File must be under 10MB'); return }
+    if (f.size > 10 * 1024 * 1024) { setError('File must be under 10 MB'); return }
     setFile(f)
+    setError('')
+  }
+
+  const handleSampleUrl = (sampleUrl) => {
+    setUrl(sampleUrl)
+    setInputType('url')
     setError('')
   }
 
@@ -134,7 +160,7 @@ const HomePage = () => {
 
         {/* Card */}
         <div style={{ background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', padding: '36px', boxShadow: '0 32px 64px -12px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06)' }}>
-          <form onSubmit={handleSubmit}>
+          <form ref={formRef} onSubmit={handleSubmit}>
 
             {/* Toggle */}
             <div style={{ display: 'flex', gap: '6px', padding: '5px', background: 'rgba(0,0,0,0.3)', borderRadius: '14px', marginBottom: '28px', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -142,7 +168,7 @@ const HomePage = () => {
                 <button
                   key={type}
                   type="button"
-                  onClick={() => setInputType(type)}
+                  onClick={() => { setInputType(type); setError('') }}
                   style={{
                     flex: 1, padding: '12px 16px', borderRadius: '10px', fontWeight: '600', fontSize: '14px', border: 'none', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
@@ -168,15 +194,34 @@ const HomePage = () => {
                     <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
                   </div>
                   <input
+                    id="url-input"
                     type="url" value={url} onChange={e => setUrl(e.target.value)}
                     placeholder="https://example.com/article-to-summarize"
-                    required
                     style={{ width: '100%', padding: '14px 16px 14px 48px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: 'white', fontSize: '15px', outline: 'none', transition: 'all 0.2s', boxSizing: 'border-box' }}
                     onFocus={e => { e.target.style.borderColor = '#0ea5e9'; e.target.style.boxShadow = '0 0 0 3px rgba(14,165,233,0.2)' }}
                     onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.boxShadow = 'none' }}
                   />
                 </div>
-                <p style={{ marginTop: '6px', fontSize: '12px', color: '#334155' }}>Any news article, blog post, Wikipedia page, etc.</p>
+                {/* Quick-fill chips */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
+                  <span style={{ color: '#334155', fontSize: '12px', lineHeight: '28px' }}>Try:</span>
+                  {sampleUrls.map((s, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => handleSampleUrl(s.url)}
+                      style={{
+                        padding: '4px 12px', borderRadius: '999px', fontSize: '12px', fontWeight: '500',
+                        background: 'rgba(14,165,233,0.08)', border: '1px solid rgba(14,165,233,0.2)',
+                        color: '#38bdf8', cursor: 'pointer', transition: 'all 0.15s',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(14,165,233,0.15)' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(14,165,233,0.08)' }}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -207,6 +252,11 @@ const HomePage = () => {
                         <p style={{ color: '#e2e8f0', fontWeight: '600', fontSize: '14px' }}>{file.name}</p>
                         <p style={{ color: '#64748b', fontSize: '13px' }}>{(file.size / 1024).toFixed(1)} KB</p>
                       </div>
+                      <button
+                        type="button"
+                        onClick={e => { e.preventDefault(); e.stopPropagation(); setFile(null) }}
+                        style={{ padding: '4px 14px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', fontSize: '12px', fontWeight: '500', cursor: 'pointer' }}
+                      >Remove</button>
                     </>
                   ) : (
                     <>
@@ -215,7 +265,7 @@ const HomePage = () => {
                       </div>
                       <div style={{ textAlign: 'center' }}>
                         <p style={{ color: '#94a3b8', fontSize: '14px' }}><span style={{ color: '#38bdf8', fontWeight: '600' }}>Click to browse</span> or drag &amp; drop</p>
-                        <p style={{ color: '#334155', fontSize: '12px', marginTop: '4px' }}>PDF, TXT, DOC, DOCX — max 10MB</p>
+                        <p style={{ color: '#334155', fontSize: '12px', marginTop: '4px' }}>PDF, TXT, DOC, DOCX — max 10 MB</p>
                       </div>
                     </>
                   )}
@@ -231,20 +281,20 @@ const HomePage = () => {
                   <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                 </div>
                 <input
+                  id="email-input"
                   type="email" value={email} onChange={e => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  required
                   style={{ width: '100%', padding: '14px 16px 14px 48px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: 'white', fontSize: '15px', outline: 'none', transition: 'all 0.2s', boxSizing: 'border-box' }}
                   onFocus={e => { e.target.style.borderColor = '#0ea5e9'; e.target.style.boxShadow = '0 0 0 3px rgba(14,165,233,0.2)' }}
                   onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.boxShadow = 'none' }}
                 />
               </div>
-              <p style={{ marginTop: '6px', fontSize: '12px', color: '#334155' }}>We'll email you when your summary is done.</p>
+              <p style={{ marginTop: '6px', fontSize: '12px', color: '#334155' }}>We'll notify you when your summary is done.</p>
             </div>
 
             {/* Error */}
             {error && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '12px', marginBottom: '20px', color: '#f87171', fontSize: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '12px', marginBottom: '20px', color: '#f87171', fontSize: '14px', animation: 'fadeIn 0.2s ease-out' }}>
                 <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 {error}
               </div>
@@ -252,6 +302,7 @@ const HomePage = () => {
 
             {/* Submit */}
             <button
+              id="submit-btn"
               type="submit" disabled={isSubmitting}
               style={{
                 width: '100%', padding: '16px', borderRadius: '14px', fontWeight: '700', fontSize: '16px', color: 'white', border: 'none',
@@ -263,11 +314,11 @@ const HomePage = () => {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
                 letterSpacing: '0.01em',
               }}
-              onMouseEnter={e => { if (!isSubmitting) e.currentTarget.style.transform = 'translateY(-1px)'; if (!isSubmitting) e.currentTarget.style.boxShadow = '0 12px 40px -4px rgba(14,165,233,0.6)' }}
+              onMouseEnter={e => { if (!isSubmitting) { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 12px 40px -4px rgba(14,165,233,0.6)' } }}
               onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = isSubmitting ? 'none' : '0 8px 32px -4px rgba(14,165,233,0.5)' }}
             >
               {isSubmitting ? (
-                <><svg width="20" height="20" fill="none" viewBox="0 0 24 24" style={{ animation: 'spin 1s linear infinite' }}><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeOpacity="0.25" /><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" /></svg> Submitting job…</>
+                <><svg width="20" height="20" fill="none" viewBox="0 0 24 24" style={{ animation: 'spin 1s linear infinite' }}><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeOpacity="0.25" /><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" /></svg> Submitting…</>
               ) : (
                 <><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg> Summarize Now</>
               )}
@@ -279,8 +330,8 @@ const HomePage = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginTop: '32px' }}>
           {features.map((f, i) => (
             <div key={i} style={{ padding: '20px', borderRadius: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'flex-start', gap: '14px', transition: 'all 0.2s' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = `${f.color}40` }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = `${f.color}40`; e.currentTarget.style.transform = 'translateY(-2px)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.transform = 'none' }}
             >
               <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: `${f.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>{f.icon}</div>
               <div>
@@ -291,8 +342,16 @@ const HomePage = () => {
           ))}
         </div>
 
+        {/* Architecture diagram hint */}
+        <div style={{ marginTop: '32px', padding: '24px', borderRadius: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
+          <p style={{ color: '#334155', fontSize: '13px', lineHeight: 1.7 }}>
+            <span style={{ color: '#64748b', fontWeight: '600' }}>Architecture:</span>{' '}
+            <span style={{ color: '#38bdf8' }}>React</span> → <span style={{ color: '#f59e0b' }}>API Gateway</span> → <span style={{ color: '#8b5cf6' }}>Lambda</span> → <span style={{ color: '#10b981' }}>SQS</span> → <span style={{ color: '#f472b6' }}>Hugging Face AI</span> → <span style={{ color: '#0ea5e9' }}>DynamoDB</span> → <span style={{ color: '#fbbf24' }}>SNS</span>
+          </p>
+        </div>
+
         {/* Footer note */}
-        <p style={{ textAlign: 'center', color: '#1e293b', fontSize: '13px', marginTop: '40px' }}>
+        <p style={{ textAlign: 'center', color: '#1e293b', fontSize: '13px', marginTop: '32px' }}>
           Built serverless on AWS · Lambda · SQS · DynamoDB · CloudFront
         </p>
       </div>
@@ -303,8 +362,10 @@ const HomePage = () => {
         @keyframes float2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(40px,-30px) scale(1.08); } }
         @keyframes float3 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-20px,20px) scale(1.04); } }
         @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
         input::placeholder { color: #334155; }
-      `}</style>
+      `}
+      </style>
     </div>
   )
 }
