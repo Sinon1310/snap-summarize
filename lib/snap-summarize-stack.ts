@@ -163,13 +163,18 @@ export class SnapSummarizeStack extends cdk.Stack {
     }));
 
     // ----------------------------------------
-    // 9. API GATEWAY
+    // 9. API GATEWAY (with rate limiting)
     // ----------------------------------------
     const api = new apigateway.RestApi(this, 'SnapSummarizeApi', {
       restApiName: 'SnapSummarize API',
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,
+      },
+      deployOptions: {
+        stageName: 'prod',
+        throttlingRateLimit: 10,      // 10 requests per second
+        throttlingBurstLimit: 20,     // Burst capacity of 20 requests
       },
     });
 

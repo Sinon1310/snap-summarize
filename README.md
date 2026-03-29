@@ -23,17 +23,44 @@ SnapSummarize lets you paste any URL or upload a document and instantly get:
 ---
 
 ## 🏗️ Architecture
-```
-User → CloudFront → S3 (Frontend)
-     → API Gateway
-         → Lambda: RequestHandler → DynamoDB + SQS
-                                         ↓
-                              Lambda: Processor
-                                  → Hugging Face AI (Summarization)
-                                  → DynamoDB (Save Results)
-                                  → SNS (Email Notification)
-         → Lambda: ResultFetcher → DynamoDB
-```
+
+![SnapSummarize Architecture Diagram](docs/architecture-diagram.png)
+
+### Event-Driven System Flow
+
+**Frontend Layer:**
+- Users access the React frontend via **CloudFront CDN** (served from **S3**)
+- Web browser makes API requests to **API Gateway**
+
+**API Layer:**
+- **API Gateway** receives REST API requests and routes to Lambda functions
+
+**Backend Layer (Lambda Functions):**
+
+1. **Lambda 1: Request Handler**
+   - Validates input (rate limiting, URL validation)
+   - Stores job in **DynamoDB** with status `PENDING`
+   - Queues job to **Amazon SQS**
+
+2. **Lambda 2: Processor** (Triggered by SQS)
+   - Fetches content from URL or **S3** (file uploads)
+   - Calls **Hugging Face API** (BART model) for AI summarization
+   - Performs sentiment analysis and key phrase extraction
+   - Updates **DynamoDB** with status `COMPLETED` and results
+   - Sends email notification via **Amazon SNS**
+
+3. **Lambda 3: Result Fetcher**
+   - Frontend polls this Lambda every 3 seconds
+   - Reads job status and results from **DynamoDB**
+   - Returns to frontend for display
+
+**Storage & Messaging:**
+- **DynamoDB** - Stores job status, summaries, sentiment, key phrases
+- **SQS** - Message queue for async job processing
+- **S3** - File uploads bucket (pre-signed URLs)
+
+**Notification:**
+- **SNS** - Sends email alerts when summaries are ready
 
 ### Why Serverless + SQS?
 The system is **asynchronous and event-driven**. When a user submits a job:
