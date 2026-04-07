@@ -40,3 +40,4 @@ coverage/
 # Lock files (optional - some prefer to keep these)
 # package-lock.json
 # frontend/package-lock.json
+# Keep local token changes
