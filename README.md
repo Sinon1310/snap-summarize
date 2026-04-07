@@ -7,6 +7,7 @@
 ![CDK](https://img.shields.io/badge/IaC-AWS_CDK-yellow)
 ![Status](https://img.shields.io/badge/Status-Live-brightgreen)
 
+**🚀 Live Demo:** [https://d38fodes1k5hjx.cloudfront.net](https://d38fodes1k5hjx.cloudfront.net)
 
 ---
 
@@ -19,6 +20,7 @@ SnapSummarize lets you paste any URL or upload a document and instantly get:
 - 😊 Sentiment analysis (Positive / Neutral / Negative)
 - 🏷️ Key phrases extracted from the content
 - 📧 Email notification when your summary is ready
+- 📄 PDF support - Upload and summarize PDF documents
 
 ---
 
@@ -97,6 +99,9 @@ This design ensures **loose coupling**, **high scalability**, and **resilience**
 - **AI Summarization** — uses facebook/bart-large-cnn model via Hugging Face Inference API
 - **Sentiment Analysis** — detects positive, neutral, or negative tone
 - **Key Phrase Extraction** — identifies the most important topics
+- **PDF Support** — upload and summarize PDF documents (uses pdf-parse library)
+- **Rate Limiting** — 5 requests/minute per IP, API Gateway throttling at 10 req/s
+- **Input Validation** — blocks localhost, private IPs, validates email format
 - **Email Notifications** — get notified via SNS when your summary is ready
 - **File + URL Support** — submit a web URL or upload a document directly
 - **Infrastructure as Code** — entire AWS stack defined in CDK TypeScript

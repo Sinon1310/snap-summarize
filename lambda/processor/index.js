@@ -2,6 +2,7 @@ const { DynamoDBClient, UpdateItemCommand } = require("@aws-sdk/client-dynamodb"
 const { SNSClient, PublishCommand } = require("@aws-sdk/client-sns");
 const { S3Client, GetObjectCommand } = require("@aws-sdk/client-s3");
 const https = require("https");
+const pdfParse = require("pdf-parse");
 
 const dynamo = new DynamoDBClient({});
 const sns = new SNSClient({});
@@ -276,15 +277,35 @@ const extractText = (html) => {
   return sentences.join(". ").trim();
 };
 
-// ─── S3 FETCHER ─────────────────────────────────────────────────────
+// ─── S3 FETCHER (with PDF support) ─────────────────────────────────
 const fetchS3 = async (key) => {
   const command = new GetObjectCommand({
     Bucket: process.env.UPLOADS_BUCKET,
     Key: key,
   });
   const response = await s3.send(command);
-  const text = await response.Body.transformToString();
-  return text.slice(0, 5000);
+  
+  // Check if it's a PDF by file extension or content type
+  const isPdf = key.toLowerCase().endsWith('.pdf') || 
+                response.ContentType === 'application/pdf';
+  
+  if (isPdf) {
+    // Convert stream to buffer for PDF parsing
+    const chunks = [];
+    for await (const chunk of response.Body) {
+      chunks.push(chunk);
+    }
+    const buffer = Buffer.concat(chunks);
+    
+    // Parse PDF
+    const pdfData = await pdfParse(buffer);
+    console.log('PDF parsed, pages:', pdfData.numpages, 'text length:', pdfData.text.length);
+    return pdfData.text.slice(0, 5000);
+  } else {
+    // Plain text file
+    const text = await response.Body.transformToString();
+    return text.slice(0, 5000);
+  }
 };
 
 // ─── MAIN HANDLER ───────────────────────────────────────────────────

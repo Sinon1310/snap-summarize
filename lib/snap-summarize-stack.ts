@@ -124,7 +124,7 @@ export class SnapSummarizeStack extends cdk.Stack {
         JOBS_TABLE: jobsTable.tableName,
         SNS_TOPIC_ARN: jobCompleteTopic.topicArn,
         UPLOADS_BUCKET: uploadsBucket.bucketName,
-        HF_TOKEN: process.env.HF_TOKEN || '',
+        HF_TOKEN: process.env.HF_TOKEN || 'your_huggingface_token_here',
       },
       timeout: cdk.Duration.seconds(300),
       memorySize: 512,
